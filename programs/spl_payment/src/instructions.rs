@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::{errors::*};
+use crate::errors::*;
 use crate::state::{GlobalState, UserInfo};
 use crate::constants::{ GLOBAL_STATE_SEED, USER_INFO_SEED, VAULT_SEED };
 use anchor_spl::token::{transfer, Mint, Token, TokenAccount, Transfer};

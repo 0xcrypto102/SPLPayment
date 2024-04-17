@@ -5,7 +5,7 @@ seeds = false
 skip-lint = false
 
 [programs.devnet]
-spl_payment = "B16AhDEbeqNWJUGECRHzRyPvPoA3WhDtaBtXH2L1hv7f"
+spl_payment = "EL7MGw7uNeAbgU5kEp2WnKQ2BtJb2Coopnr5U8HAZM9N"
 
 [registry]
 url = "https://api.apr.dev"

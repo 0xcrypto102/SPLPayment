@@ -6,7 +6,7 @@ pub enum SplPaymentError {
     NotAllowedOwner,
 
     #[msg("SplPaymentError: Over max deposit amont")]
-    MaxBetAmount,
+    MaxDepositAmount,
 
     #[msg("SplPaymentError: InvalidAmount")]
     InvalidAmount,
