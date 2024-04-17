@@ -51,7 +51,7 @@ pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
     }
 
     if accts.global_state.max_amount < amount {
-        return Err(SplPaymentError::MaxBetAmount.into());
+        return Err(SplPaymentError::MaxDepositAmount.into());
     }
 
     if amount == 0 {
