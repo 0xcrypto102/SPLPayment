@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::*;
+use crate::events::{DepositEvent, WithdrawEvent};
 use crate::state::{GlobalState, UserInfo};
 use crate::constants::{ GLOBAL_STATE_SEED, USER_INFO_SEED, VAULT_SEED };
 use anchor_spl::token::{transfer, Mint, Token, TokenAccount, Transfer};
@@ -8,12 +9,11 @@ use anchor_spl::token::{transfer, Mint, Token, TokenAccount, Transfer};
 use std::mem::size_of;
 
 
-pub fn initialize(ctx: Context<Initialize>, max_amount: u64) -> Result<()> {
+pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
     let accts = ctx.accounts;
 
     accts.global_state.owner = accts.owner.key();
     accts.global_state.token_mint = accts.token_mint.key();
-    accts.global_state.max_amount = max_amount;
     accts.global_state.vault = accts.token_vault_account.key();
 
     Ok(())
@@ -31,27 +31,11 @@ pub fn update_owner(ctx: Context<SetData>, new_owner: Pubkey) -> Result<()> {
     Ok(())
 }
 
-pub fn update_max_amount(ctx: Context<SetData>, max_amount: u64) -> Result<()> {
-    let accts = ctx.accounts;
-
-    if accts.global_state.owner != accts.owner.key() {
-        return Err(SplPaymentError::NotAllowedOwner.into());
-    }
-
-    accts.global_state.max_amount = max_amount;
-
-    Ok(())
-}
-
 pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
     let accts = ctx.accounts;
 
     if accts.token_mint.key() != accts.global_state.token_mint {
         return Err(SplPaymentError::InvalidTokenAddress.into());
-    }
-
-    if accts.global_state.max_amount < amount {
-        return Err(SplPaymentError::MaxDepositAmount.into());
     }
 
     if amount == 0 {
@@ -71,6 +55,21 @@ pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
     accts.user_info.address = accts.user.key();
     accts.user_info.amount += amount;
     accts.user_info.updated_time = accts.clock.unix_timestamp;
+
+    // Update user_info and get new total staked
+    let user_total_staked = accts.user_info.amount;
+
+    // Get current total in vault
+    let total_in_vault = accts.token_vault_account.amount;
+
+    // Emitting the enhanced deposit event
+    emit!(DepositEvent {
+        user: accts.user.key(),
+        amount: amount,
+        user_total_staked: user_total_staked,
+        total_in_vault: total_in_vault,
+        timestamp: accts.clock.unix_timestamp,
+    });
 
     Ok(())
 }
@@ -112,6 +111,21 @@ pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
     accts.user_info.amount -= amount;
     accts.user_info.updated_time = accts.clock.unix_timestamp;
 
+    // Update user_info and get new total staked
+    let user_total_staked = accts.user_info.amount;
+
+    // Get current total in vault
+    let total_in_vault = accts.token_vault_account.amount;
+
+    // Emitting the enhanced withdraw event
+    emit!(WithdrawEvent {
+        user: accts.user.key(),
+        amount: amount,
+        user_total_staked: user_total_staked,
+        total_in_vault: total_in_vault,
+        timestamp: accts.clock.unix_timestamp,
+    });
+
     Ok(())
 }
 
@@ -138,7 +152,7 @@ pub struct Initialize<'info> {
         token::mint = token_mint,
         token::authority = global_state,
     )]
-    token_vault_account: Account<'info, TokenAccount>,
+    pub token_vault_account: Account<'info, TokenAccount>,
 
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
