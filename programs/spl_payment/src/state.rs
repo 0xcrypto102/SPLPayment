@@ -6,7 +6,6 @@ pub struct GlobalState {
     pub owner: Pubkey, // the pubkey of owner
     pub token_mint: Pubkey, // the apl_token
     pub vault: Pubkey, // the address of SPL token
-    pub max_amount: u64, // the max amount of SPL token that user can deposit
 }
 
 #[account]
