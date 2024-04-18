@@ -5,10 +5,12 @@ import { SplPayment } from "../target/types/spl_payment";
 import { SystemProgram, Keypair, PublicKey, Transaction, SYSVAR_RENT_PUBKEY, SYSVAR_CLOCK_PUBKEY } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, createAccount, createAssociatedTokenAccount, getAssociatedTokenAddress , ASSOCIATED_TOKEN_PROGRAM_ID,createMint, mintTo, mintToChecked, getAccount, getMint, getAssociatedTokenAddressSync,  } from "@solana/spl-token";
 
+
 describe("spl_payment", () => {
   // Configure the client to use the local cluster.
-  anchor.setProvider(anchor.AnchorProvider.env());
-
+  const provider = anchor.AnchorProvider.env();
+  anchor.setProvider(provider);
+  type Event = anchor.IdlEvents<typeof program["idl"]>;
   const program = anchor.workspace.SplPayment as Program<SplPayment>;
 
   let globalState, tokenVaultAccount, userInfo, tokenOwnerAccount: PublicKey;
@@ -19,11 +21,13 @@ describe("spl_payment", () => {
   const VAULT_SEED = "VAULT-SEED";
   const tokenMint = new PublicKey("8NtheYSKWDkCgWoc8HScQFkcCTF1FiFEbbriosZLNmtE");
 
-  let owner = Keypair.fromSecretKey(Uint8Array.from(/**/));
+  let owner = Keypair.fromSecretKey(Uint8Array.from(/* */));
 
   let user = Keypair.fromSecretKey(
-    Uint8Array.from(/**/)
+    Uint8Array.from(/* */)
   );
+
+
 
   it("is initialized accounts", async() => {
     [globalState, globalStateBump] = await anchor.web3.PublicKey.findProgramAddress(
@@ -54,11 +58,10 @@ describe("spl_payment", () => {
       user.publicKey
     );
   })
-
+  
   it("Is initialized!", async () => {
-    const max_amount = 100000000000;
     const tx = await program.rpc.initialize(
-      new anchor.BN(max_amount),{
+    {
         accounts: {
           owner: owner.publicKey,
           globalState,
@@ -74,25 +77,7 @@ describe("spl_payment", () => {
     const globalStateData = await program.account.globalState.fetch(globalState);
     console.log("globalStateData->", globalStateData);
   });
-
-  it("update max_amount", async() => {
-    const max_amount = 50000000;
-
-    const tx = await program.rpc.updateMaxAmount(
-      new anchor.BN(max_amount),
-      {
-        accounts: {
-          owner: owner.publicKey,
-          globalState,
-          systemProgram: SystemProgram.programId
-        },
-        signers: [owner]
-      }
-    );
-    const globalStateData = await program.account.globalState.fetch(globalState);
-    console.log("updated max_amount", Number(globalStateData.maxAmount));
-  });
-
+  
   it("update owner", async() => {
     const new_owner = new PublicKey("7bVNisSuPayDrdBdNh7uiJNSiLrjatnADPSTLWBoUUHb");
 
@@ -109,65 +94,70 @@ describe("spl_payment", () => {
     );
     const globalStateData = await program.account.globalState.fetch(globalState);
     console.log("updated owner",globalStateData.owner.toString());
-  });
+  }); 
   
   it("deposit", async() => {
-   
     const depositAmount = 50000000;
-    
     try {
-      console.log("before deposit: current balance ->")
-      getTokenBalanceSpl(program.provider.connection, tokenOwnerAccount).catch(err => console.log(err));
-      const tx = await program.rpc.deposit(
-        new anchor.BN(depositAmount),
-        {
-          accounts: {
-            user: user.publicKey,
-            globalState,
-            userInfo,
-            tokenMint,
-            tokenVaultAccount,
-            tokenOwnerAccount,
-            systemProgram: SystemProgram.programId,
-            tokenProgram: TOKEN_PROGRAM_ID,
-            clock: SYSVAR_CLOCK_PUBKEY
-          },
-          signers: [user]
-        }
-      );
-      const userInfoData = await program.account.userInfo.fetch(userInfo);
-      console.log("userInfoData -> ", userInfoData);
+      let listenerId: number;
+      const event = await new Promise<Event[E]>(async (res) => {
+        listenerId = program.addEventListener("DepositEvent", (event) => {
+          res(event);
+        });
+        const tx = await program.rpc.deposit(
+          new anchor.BN(depositAmount),
+          {
+            accounts: {
+              user: user.publicKey,
+              globalState,
+              userInfo,
+              tokenMint,
+              tokenVaultAccount,
+              tokenOwnerAccount,
+              systemProgram: SystemProgram.programId,
+              tokenProgram: TOKEN_PROGRAM_ID,
+              clock: SYSVAR_CLOCK_PUBKEY
+            },
+            signers: [user]
+          }
+        );
+      });
+      await program.removeEventListener(listenerId);
+      console.log(event);
     } catch (error) {
       console.log(error);
     } 
-    console.log("after deposit: current balance ->")
-    getTokenBalanceSpl(program.provider.connection, tokenOwnerAccount).catch(err => console.log(err));
   });
 
-  
   it("withdraw", async() => {
     const withdrawAmount = 49000000;
 
     try {
-      const tx = await program.rpc.withdraw(
-        new anchor.BN(withdrawAmount),
-        {
-          accounts: {
-            user: user.publicKey,
-            globalState,
-            userInfo,
-            tokenMint,
-            tokenVaultAccount,
-            tokenOwnerAccount,
-            systemProgram: SystemProgram.programId,
-            tokenProgram: TOKEN_PROGRAM_ID,
-            clock: SYSVAR_CLOCK_PUBKEY
-          },
-          signers: [user]
-        }
-      );
-      console.log("after withdraw: current balance ->")
-      getTokenBalanceSpl(program.provider.connection, tokenOwnerAccount).catch(err => console.log(err));
+      let listenerId: number;
+      const event = await new Promise<Event[E]>(async (res) => {
+        listenerId = program.addEventListener("WithdrawEvent", (event) => {
+          res(event);
+        });
+        const tx = await program.rpc.withdraw(
+          new anchor.BN(withdrawAmount),
+          {
+            accounts: {
+              user: user.publicKey,
+              globalState,
+              userInfo,
+              tokenMint,
+              tokenVaultAccount,
+              tokenOwnerAccount,
+              systemProgram: SystemProgram.programId,
+              tokenProgram: TOKEN_PROGRAM_ID,
+              clock: SYSVAR_CLOCK_PUBKEY
+            },
+            signers: [user]
+          }
+        );
+      });
+      await program.removeEventListener(listenerId);
+      console.log(event);
     } catch (error) {
       console.log(error);
     }
